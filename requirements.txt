@@ -1,0 +1,9 @@
+Django>=5.2.0,<6.0.0
+python-dotenv>=1.0.0,<2.0.0
+groq>=0.29.0,<1.0.0
+SpeechRecognition>=3.10.0,<4.0.0
+pydub>=0.25.1,<0.26.0
+pyaudio>=0.2.14,<0.3.0
+gTTS>=2.5.0,<3.0.0
+# python-magic removed due to installation issues
+# Use wave module from standard library instead

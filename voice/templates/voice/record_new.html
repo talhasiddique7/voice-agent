@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voice Agent - Record</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <style>
+        .pulse {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        .hidden {
+            display: none;
+        }
+        .audio-player {
+            width: 100%;
+            max-width: 300px;
+            margin: 10px 0;
+        }
+        .audio-player audio {
+            width: 100%;
+            height: 40px;
+        }
+        .recording-animation {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            background-color: #ef4444;
+            border-radius: 50%;
+            margin-right: 8px;
+            animation: pulse 1.5s infinite;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen p-4">
+    <div class="max-w-4xl mx-auto bg-white rounded-lg shadow-lg overflow-hidden">
+        <!-- Header -->
+        <div class="bg-blue-500 text-white p-4">
+            <h1 class="text-2xl font-bold text-center">👋 Hi! I'm Buddy, Your Learning Friend</h1>
+            <p class="text-center text-blue-100 text-sm">Click the record button to start speaking!</p>
+        </div>
+        
+        <!-- Chat Container -->
+        <div class="h-96 overflow-y-auto p-4 space-y-4" id="chatContainer">
+            <!-- Messages will be added here -->
+        </div>
+        
+        <!-- Input Area -->
+        <div class="border-t p-4 bg-gray-50">
+            <div class="flex items-center space-x-2">
+                <!-- Language Selection -->
+                <select id="language" class="flex-1 p-2 border border-gray-300 rounded-md text-sm">
+                    <option value="en-US">English (US)</option>
+                    <option value="en-GB">English (UK)</option>
+                    <option value="es-ES">Spanish</option>
+                    <option value="fr-FR">French</option>
+                    <option value="de-DE">German</option>
+                    <option value="hi-IN">Hindi</option>
+                </select>
+                
+                <!-- Audio Recording Button -->
+                <button id="recordButton" 
+                        class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-full transition-all duration-300 flex items-center">
+                    <span id="recordIcon" class="mr-1">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+                        </svg>
+                    </span>
+                    <span id="recordText">Record</span>
+                </button>
+
+                <!-- Text Input -->
+                <input type="text" id="userInput" 
+                       class="flex-1 p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" 
+                       placeholder="Or type your message...">
+                
+                <!-- Send Button -->
+                <button id="sendButton" 
+                        class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-full transition-all duration-300 flex items-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M12 5l7 7-7 7" />
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Audio recording variables
+        let mediaRecorder;
+        let audioChunks = [];
+        let isRecording = false;
+        let audioContext;
+        
+        // Initialize audio context
+        function initAudioContext() {
+            if (!audioContext) {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            }
+        }
+
+        // Start audio recording
+        async function startAudioRecording() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                mediaRecorder = new MediaRecorder(stream);
+                audioChunks = [];
+                
+                mediaRecorder.ondataavailable = (event) => {
+                    if (event.data.size > 0) {
+                        audioChunks.push(event.data);
+                    }
+                };
+                
+                mediaRecorder.onstop = async () => {
+                    const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+                    await processAudioRecording(audioBlob);
+                };
+                
+                mediaRecorder.start();
+                isRecording = true;
+                updateRecordingUI(true);
+                
+                // Set a time limit for recording (e.g., 30 seconds)
+                setTimeout(() => {
+                    if (isRecording) {
+                        stopAudioRecording();
+                    }
+                }, 30000);
+                
+            } catch (error) {
+                console.error('Error accessing microphone:', error);
+                showError('Could not access microphone. Please check permissions.');
+            }
+        }
+        
+        // Stop audio recording
+        function stopAudioRecording() {
+            if (mediaRecorder && isRecording) {
+                mediaRecorder.stop();
+                mediaRecorder.stream.getTracks().forEach(track => track.stop());
+                isRecording = false;
+                updateRecordingUI(false);
+            }
+        }
+        
+        // Process the recorded audio
+        async function processAudioRecording(audioBlob) {
+            const typingId = showTypingIndicator();
+            const formData = new FormData();
+            formData.append('audio', audioBlob, 'recording.wav');
+            
+            try {
+                // Send audio to server for transcription
+                const response = await fetch('/api/upload-audio/', {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': getCookie('csrftoken'),
+                    },
+                    body: formData,
+                });
+                
+                const data = await response.json();
+                hideTypingIndicator(typingId);
+                
+                if (data.success && data.text) {
+                    // Add user message with audio player
+                    addMessageWithAudio('user', data.text, data.audio_url);
+                    
+                    // Process the transcribed text
+                    await processUserInput(data.text);
+                } else {
+                    showError('Could not transcribe audio. Please try again.');
+                }
+            } catch (error) {
+                console.error('Error processing audio:', error);
+                hideTypingIndicator(typingId);
+                showError('Error processing audio. Please try again.');
+            }
+        }
+        
+        // Update UI based on recording state
+        function updateRecordingUI(recording) {
+            const recordButton = document.getElementById('recordButton');
+            const recordIcon = document.querySelector('#recordIcon');
+            const recordText = document.getElementById('recordText');
+            const sendButton = document.getElementById('sendButton');
+            const userInput = document.getElementById('userInput');
+            
+            if (recording) {
+                recordButton.classList.remove('bg-blue-500', 'hover:bg-blue-600');
+                recordButton.classList.add('bg-red-500', 'hover:bg-red-600');
+                recordIcon.innerHTML = '<div class="recording-animation"></div>';
+                recordText.textContent = 'Stop';
+                userInput.disabled = true;
+                sendButton.disabled = true;
+            } else {
+                recordButton.classList.remove('bg-red-500', 'hover:bg-red-600');
+                recordButton.classList.add('bg-blue-500', 'hover:bg-blue-600');
+                recordIcon.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" /></svg>';
+                recordText.textContent = 'Record';
+                userInput.disabled = false;
+                sendButton.disabled = false;
+            }
+        }
+        
+        // Add message with audio player
+        function addMessageWithAudio(role, text, audioUrl) {
+            const chatContainer = document.getElementById('chatContainer');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `flex ${role === 'user' ? 'justify-end' : 'justify-start'}`;
+            
+            let messageContent = `
+                <div class="max-w-xs md:max-w-md lg:max-w-lg xl:max-w-xl rounded-lg px-4 py-2 ${role === 'user' ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-800'}">
+                    <p class="mb-2">${text}</p>
+            `;
+            
+            if (audioUrl) {
+                messageContent += `
+                    <div class="audio-player">
+                        <audio controls class="w-full">
+                            <source src="${audioUrl}" type="audio/wav">
+                            Your browser does not support the audio element.
+                        </audio>
+                    </div>
+                `;
+            }
+            
+            messageContent += '</div>';
+            messageDiv.innerHTML = messageContent;
+            chatContainer.appendChild(messageDiv);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+        
+        // Show typing indicator
+        function showTypingIndicator(id = 'typingIndicator') {
+            const chatContainer = document.getElementById('chatContainer');
+            const typingDiv = document.createElement('div');
+            typingDiv.className = 'flex justify-start';
+            typingDiv.id = id;
+            typingDiv.innerHTML = `
+                <div class="bg-gray-200 text-gray-800 rounded-lg px-4 py-2">
+                    <div class="flex space-x-1">
+                        <div class="w-2 h-2 bg-gray-600 rounded-full animate-bounce"></div>
+                        <div class="w-2 h-2 bg-gray-600 rounded-full animate-bounce" style="animation-delay: 0.2s"></div>
+                        <div class="w-2 h-2 bg-gray-600 rounded-full animate-bounce" style="animation-delay: 0.4s"></div>
+                    </div>
+                </div>
+            `;
+            chatContainer.appendChild(typingDiv);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+            return id;
+        }
+        
+        // Hide typing indicator
+        function hideTypingIndicator(id = 'typingIndicator') {
+            const typingElement = document.getElementById(id);
+            if (typingElement) {
+                typingElement.remove();
+            }
+        }
+        
+        // Process user input (text from speech or manual input)
+        async function processUserInput(text) {
+            if (!text.trim()) return;
+            
+            const typingId = showTypingIndicator();
+            
+            try {
+                // Get chat history
+                const messages = Array.from(document.querySelectorAll('#chatContainer > div'))
+                    .filter(el => !el.id.includes('typingIndicator'))
+                    .map(el => {
+                        const isUser = el.classList.contains('justify-end');
+                        const text = el.querySelector('p')?.textContent || '';
+                        return {
+                            role: isUser ? 'user' : 'assistant',
+                            content: text
+                        };
+                    });
+                
+                // Send to server for processing
+                const response = await fetch('/api/process-with-groq/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken'),
+                    },
+                    body: JSON.stringify({
+                        text: text,
+                        history: messages
+                    }),
+                });
+                
+                const data = await response.json();
+                hideTypingIndicator(typingId);
+                
+                if (data.success) {
+                    // Add assistant's response with audio (without auto-play)
+                    addMessageWithAudio('assistant', data.response, data.audio_url);
+                    
+                    // Voice response is now manual - user can click the play button to hear it
+                } else {
+                    showError('Error getting response from server. ' + (data.error || ''));
+                }
+            } catch (error) {
+                console.error('Error processing input:', error);
+                hideTypingIndicator(typingId);
+                showError('Error processing your request. Please try again.');
+            }
+        }
+        
+        // Show error message
+        function showError(message) {
+            const chatContainer = document.getElementById('chatContainer');
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'flex justify-center';
+            errorDiv.innerHTML = `
+                <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-2 rounded">
+                    ${message}
+                </div>
+            `;
+            chatContainer.appendChild(errorDiv);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+        
+        // Get CSRF token from cookies
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+        
+        // Event Listeners
+        document.addEventListener('DOMContentLoaded', () => {
+            initAudioContext();
+            
+            // Record button click handler
+            const recordButton = document.getElementById('recordButton');
+            if (recordButton) {
+                recordButton.addEventListener('click', () => {
+                    if (isRecording) {
+                        stopAudioRecording();
+                    } else {
+                        startAudioRecording();
+                    }
+                });
+            }
+            
+            // Send button click handler
+            const sendButton = document.getElementById('sendButton');
+            const userInput = document.getElementById('userInput');
+            
+            if (sendButton && userInput) {
+                sendButton.addEventListener('click', () => {
+                    const text = userInput.value.trim();
+                    if (text) {
+                        addMessageWithAudio('user', text);
+                        processUserInput(text);
+                        userInput.value = '';
+                    }
+                });
+                
+                // Handle Enter key in input
+                userInput.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter' && userInput.value.trim()) {
+                        const text = userInput.value.trim();
+                        addMessageWithAudio('user', text);
+                        processUserInput(text);
+                        userInput.value = '';
+                    }
+                });
+            }
+            
+            // Add welcome message (without audio)
+        setTimeout(() => {
+            const welcomeMessage = "Hi there! I'm Buddy, your learning friend. You can ask me anything, and I'll help you learn in a fun way! Click the play button to hear my responses.";
+            addMessage('assistant', welcomeMessage);
+        }, 1000);
+        });
+    </script>
+</body>
+</html>
