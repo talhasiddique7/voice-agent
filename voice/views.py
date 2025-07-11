@@ -18,7 +18,6 @@ def home(request):
     # Debug: Check if GROQ_API_KEY is loaded
     groq_key = os.getenv("GROQ_API_KEY")
     print(f"GROQ_API_KEY loaded: {'Yes' if groq_key else 'No'}")
-    print(f"GROQ_API_KEY starts with: {groq_key[:5] if groq_key else 'None'}...")
     
     # Add media URL to context
     context = {
@@ -32,7 +31,6 @@ def debug_env(request):
     """Debug endpoint to check environment variables"""
     env_vars = {
         'GROQ_API_KEY_LOADED': bool(os.getenv("GROQ_API_KEY")),
-        'GROQ_API_KEY_STARTS_WITH': os.getenv("GROQ_API_KEY", "")[:5] + '...' if os.getenv("GROQ_API_KEY") else 'Not found',
         'PYTHONPATH': os.getenv("PYTHONPATH"),
         'DJANGO_SETTINGS_MODULE': os.getenv("DJANGO_SETTINGS_MODULE"),
     }
@@ -246,8 +244,6 @@ def process_with_groq(request):
                 temperature=0.7,
                 max_tokens=200,
                 top_p=1,
-                frequency_penalty=0,
-                presence_penalty=0
             )
             
             # Extract the response text
