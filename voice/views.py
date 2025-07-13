@@ -239,10 +239,10 @@ def process_with_groq(request):
             print("Sending request to GROQ API...")
             # Get response from GROQ
             completion = client.chat.completions.create(
-                model="llama3-8b-8192",
+                model="llama-3.3-70b-versatile",
                 messages=messages,
-                temperature=0.7,
-                max_tokens=200,
+                temperature=0.3,
+                max_tokens=250,
                 top_p=1,
             )
             

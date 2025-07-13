@@ -1,10 +1,12 @@
 import os
+import io
+import wave
+import tempfile
+import traceback
 import speech_recognition as sr
 from gtts import gTTS
 from pydub import AudioSegment
 from pydub.playback import play
-import tempfile
-import wave
 
 class AudioProcessor:
     def __init__(self):
@@ -27,13 +29,66 @@ class AudioProcessor:
 
     def transcribe_audio(self, audio_file_path):
         """Transcribe audio file to text"""
+        # Verify the file exists and is not empty
+        if not os.path.exists(audio_file_path):
+            print(f"Error: Audio file not found at {audio_file_path}")
+            return None
+            
+        file_size = os.path.getsize(audio_file_path)
+        if file_size == 0:
+            print("Error: Audio file is empty")
+            return None
+            
+        print(f"Attempting to transcribe file: {audio_file_path} (Size: {file_size} bytes)")
+        
         try:
-            with sr.AudioFile(audio_file_path) as source:
+            # Convert audio to WAV format if needed
+            audio = AudioSegment.from_file(audio_file_path)
+            print(f"Original audio info - Channels: {audio.channels}, Frame rate: {audio.frame_rate}, Duration: {len(audio)/1000}s")
+            
+            # Convert to mono and set sample rate to 16kHz if needed
+            if audio.channels > 1:
+                audio = audio.set_channels(1)
+                print("Converted to mono")
+            if audio.frame_rate != 16000:
+                audio = audio.set_frame_rate(16000)
+                print(f"Converted to 16kHz (was {audio.frame_rate}Hz)")
+            
+            # Save as WAV in memory
+            wav_io = io.BytesIO()
+            audio.export(wav_io, format='wav')
+            wav_io.seek(0)
+            
+            # Use the in-memory WAV file for recognition
+            with sr.AudioFile(wav_io) as source:
+                print("Adjusting for ambient noise...")
+                self.recognizer.adjust_for_ambient_noise(source, duration=0.5)
+                print("Recording audio...")
                 audio_data = self.recognizer.record(source)
-                text = self.recognizer.recognize_google(audio_data)
-                return text
+                print("Sending to Google Speech Recognition...")
+                try:
+                    text = self.recognizer.recognize_google(audio_data)
+                    print(f"Transcription successful: {text}")
+                    return text
+                except sr.UnknownValueError:
+                    print("Error: Google Speech Recognition could not understand the audio")
+                    return None
+                except sr.RequestError as e:
+                    print(f"Error: Could not request results from Google Speech Recognition service; {e}")
+                    return None
         except Exception as e:
-            print(f"Error in transcription: {str(e)}")
+            import traceback
+            error_details = traceback.format_exc()
+            print(f"Error in transcription: {str(e)}\n{error_details}")
+            
+            # Provide more specific error messages
+            if "Audio data must be audio data" in str(e):
+                print("Error: The audio format might be incompatible. Try converting to WAV format first.")
+            elif "Invalid audio data" in str(e):
+                print("Error: The audio data is invalid or corrupted.")
+            elif "recognition connection failed" in str(e).lower():
+                print("Error: Could not connect to Google's servers. Check your internet connection.")
+                
             return None
 
     def text_to_speech(self, text, lang='en', slow=False):

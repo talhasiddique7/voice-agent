@@ -36,62 +36,93 @@
         }
     </style>
 </head>
-<body class="bg-gray-100 min-h-screen p-4">
-    <div class="max-w-4xl mx-auto bg-white rounded-lg shadow-lg overflow-hidden">
-        <!-- Header -->
-        <div class="bg-blue-500 text-white p-4">
-            <h1 class="text-2xl font-bold text-center">👋 Hi! I'm Buddy, Your Learning Friend</h1>
-            <p class="text-center text-blue-100 text-sm">Click the record button to start speaking!</p>
-        </div>
-        
-        <!-- Chat Container -->
-        <div class="h-96 overflow-y-auto p-4 space-y-4" id="chatContainer">
-            <!-- Messages will be added here -->
-        </div>
-        
-        <!-- Input Area -->
-        <div class="border-t p-4 bg-gray-50">
-            <div class="flex items-center space-x-2">
-                <!-- Language Selection -->
-                <select id="language" class="flex-1 p-2 border border-gray-300 rounded-md text-sm">
-                    <option value="en-US">English (US)</option>
-                    <option value="en-GB">English (UK)</option>
-                    <option value="es-ES">Spanish</option>
-                    <option value="fr-FR">French</option>
-                    <option value="de-DE">German</option>
-                    <option value="hi-IN">Hindi</option>
-                </select>
-                
-                <!-- Audio Recording Button -->
-                <button id="recordButton" 
-                        class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-full transition-all duration-300 flex items-center">
-                    <span id="recordIcon" class="mr-1">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
-                        </svg>
-                    </span>
-                    <span id="recordText">Record</span>
-                </button>
-
-                <!-- Text Input -->
-                <input type="text" id="userInput" 
-                       class="flex-1 p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" 
-                       placeholder="Or type your message...">
-                
-                <!-- Send Button -->
-                <button id="sendButton" 
-                        class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-full transition-all duration-300 flex items-center">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M12 5l7 7-7 7" />
-                    </svg>
-                </button>
+<body class="relative min-h-screen bg-gradient-to-br from-blue-200 via-purple-200 to-pink-100 flex flex-col">
+    <!-- Dark overlay for depth -->
+    <div class="absolute inset-0 bg-black bg-opacity-10 pointer-events-none z-0"></div>
+    <div class="flex-grow flex flex-col relative z-10 w-full h-full">
+        <div class="w-full h-full rounded-none shadow-none bg-white/80 backdrop-blur-lg border-none overflow-hidden flex flex-col min-h-screen">
+            <!-- Header -->
+            <div class="sticky top-0 bg-gradient-to-r from-blue-500 to-indigo-500 text-white p-6 shadow-md z-20">
+                <h1 class="text-3xl font-extrabold text-center tracking-tight drop-shadow-lg">👋 Hi! I'm Buddy, Your Learning Friend</h1>
+                <p class="text-center text-blue-100 text-base mt-1">Ask me anything, and I'll help you learn!</p>
             </div>
+            <!-- Chat Container -->
+            <div class="flex-1 overflow-y-auto p-4 space-y-4 bg-transparent" id="chatContainer" style="min-height:300px;">
+                <!-- Messages will be added here -->
+            </div>
+            <!-- Input Area -->
+        <div class="border-t p-4 bg-gray-50">
+    <form class="flex flex-col sm:flex-row items-stretch gap-2" onsubmit="event.preventDefault(); document.getElementById('sendButton').click();">
+        <!-- Language Selection -->
+        <select id="language" class="w-full sm:w-auto p-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 transition">
+            <option value="en-US">English (US)</option>
+            <option value="en-GB">English (UK)</option>
+            <option value="es-ES">Spanish</option>
+            <option value="fr-FR">French</option>
+            <option value="de-DE">German</option>
+            <option value="hi-IN">Hindi</option>
+        </select>
+        <!-- Audio Recording Button -->
+        <button id="recordButton" type="button"
+            class="flex-1 sm:flex-none bg-blue-500 hover:bg-blue-600 focus:ring-2 focus:ring-blue-400 text-white font-bold py-2 px-4 rounded-full transition-all duration-300 flex items-center justify-center shadow-md focus:outline-none">
+            <span id="recordIcon" class="mr-1">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+                </svg>
+            </span>
+            <span id="recordText">Record</span>
+        </button>
+        <!-- Text Input -->
+        <input type="text" id="userInput"
+            class="flex-1 p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 transition placeholder-gray-400"
+            placeholder="Or type your message..." autocomplete="off">
+        <!-- Send Button -->
+        <button id="sendButton" type="button"
+            class="bg-green-500 hover:bg-green-600 focus:ring-2 focus:ring-green-400 text-white font-bold py-2 px-4 rounded-full transition-all duration-300 flex items-center justify-center shadow-md focus:outline-none">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M12 5l7 7-7 7" />
+            </svg>
+        </button>
+    </form>
+</div>
+            <!-- Footer -->
+            <footer class="bg-white/60 border-t border-white/30 text-gray-500 text-xs text-center p-3 mt-auto z-10">
+                &copy; 2025 Buddy Voice Agent &mdash; Designed with ❤️ for learning
+            </footer>
         </div>
     </div>
 
     <script>
         // Audio recording variables
         let mediaRecorder;
+
+        // Utility to add a chat message with professional bubble styling
+        function addMessageWithAudio(role, text, audioUrl) {
+            const chatContainer = document.getElementById('chatContainer');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = role === 'user'
+                ? 'flex justify-end w-full mb-2'
+                : 'flex justify-start w-full mb-2';
+            const bubble = document.createElement('div');
+            bubble.className = role === 'user'
+                ? 'max-w-[80%] bg-gradient-to-br from-blue-400 to-indigo-500 text-white rounded-2xl shadow-lg px-5 py-3 text-base font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500'
+                : 'max-w-[80%] bg-white/80 backdrop-blur-md text-gray-800 rounded-2xl shadow-lg px-5 py-3 text-base font-medium border border-white/60 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-indigo-400';
+            bubble.setAttribute('tabindex', '0');
+            bubble.setAttribute('aria-label', role === 'user' ? 'Your message' : 'Assistant message');
+            bubble.innerHTML = `<span>${text}</span>`;
+            if (audioUrl && role === 'assistant') {
+                const audioPlayer = document.createElement('audio');
+                audioPlayer.src = audioUrl;
+                audioPlayer.controls = true;
+                audioPlayer.className = 'audio-player mt-2';
+                bubble.appendChild(audioPlayer);
+            }
+            messageDiv.appendChild(bubble);
+            chatContainer.appendChild(messageDiv);
+            // Smooth scroll to bottom
+            chatContainer.scrollTo({ top: chatContainer.scrollHeight, behavior: 'smooth' });
+        }
+
         let audioChunks = [];
         let isRecording = false;
         let audioContext;
